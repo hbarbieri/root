@@ -1,0 +1,63 @@
+name: Check for Duplicate Quality Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '**.yaml'
+      - '**.yml'
+
+jobs:
+  check-duplicates:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          pip install pyyaml databricks-sql-connector requests
+      
+      - name: Get changed files
+        id: changed-files
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}..HEAD | grep -E '\.(yaml|yml)$' > changed_files.txt || true
+          cat changed_files.txt
+      
+      - name: Check for duplicates
+        id: check
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+          DATABRICKS_HTTP_PATH: ${{ secrets.DATABRICKS_HTTP_PATH }}
+        run: |
+          python .github/scripts/check_duplicate_checks.py changed_files.txt
+      
+      - name: Comment PR
+        if: steps.check.outputs.has_duplicates == 'true'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const comment = fs.readFileSync('duplicate_report.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+      
+      - name: Fail if critical duplicates
+        if: steps.check.outputs.critical_duplicates == 'true'
+        run: |
+          echo "Critical duplicate checks found!"
+          exit 1
+
