@@ -33,7 +33,6 @@ When a PR is created with YAML file changes:
 Simply create a PR with your YAML check definitions. The action will:
 - ✅ Automatically detect duplicates
 - 💬 Comment on the PR with findings
-- ⚠️ Optionally block merging if critical duplicates found
 
 ## Files
 
