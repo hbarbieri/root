@@ -49,7 +49,7 @@ def query_existing_checks(connection, table_names: Set[str]) -> Dict[str, List[s
         check_type,
         COUNT(*) as execution_count,
         MAX(scan_time) as last_execution
-    FROM all_scan_results
+    FROM etl.data__dataset.data_quality_all_scan_results
     WHERE dataset_name IN ('{table_list}')
     GROUP BY dataset_name, check_name, check_type
     ORDER BY dataset_name, check_name
@@ -150,14 +150,27 @@ def main():
     print(f"Found {len(all_new_checks)} new checks for {len(table_names)} tables")
     
     # Query Databricks for existing checks
-    connection = sql.connect(
-        server_hostname=os.environ['DATABRICKS_HOST'],
-        http_path=os.environ['DATABRICKS_HTTP_PATH'],
-        access_token=os.environ['DATABRICKS_TOKEN']
-    )
-    
-    existing_checks = query_existing_checks(connection, table_names)
-    connection.close()
+    try:
+        connection = sql.connect(
+            server_hostname=os.environ['DATABRICKS_HOST'],
+            http_path=os.environ['DATABRICKS_HTTP_PATH'],
+            access_token=os.environ['DATABRICKS_TOKEN']
+        )
+    except KeyError as e:
+        print(f"Missing required environment variable: {e}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Failed to connect to Databricks: {e}")
+        sys.exit(1)
+
+    try:
+        existing_checks = query_existing_checks(connection, table_names)
+    except Exception as e:
+        print(f"Failed to query all_scan_results: {e}")
+        connection.close()
+        sys.exit(1)
+    finally:
+        connection.close()
     
     print(f"Found existing checks for {len(existing_checks)} tables")
     
