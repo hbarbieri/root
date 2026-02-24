@@ -170,8 +170,7 @@ def main():
     # Set GitHub Actions outputs
     with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
         f.write(f"has_duplicates={'true' if has_duplicates else 'false'}\n")
-        f.write(f"critical_duplicates={'false'}\n")  # Adjust logic as needed
-    
+
     print(f"Duplicate check complete: {len(duplicates)} potential duplicates found")
 
 if __name__ == '__main__':

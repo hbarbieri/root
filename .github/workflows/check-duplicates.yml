@@ -54,10 +54,12 @@ jobs:
               repo: context.repo.repo,
               body: comment
             });
-      
-      - name: Fail if critical duplicates
-        if: steps.check.outputs.critical_duplicates == 'true'
-        run: |
-          echo "Critical duplicate checks found!"
-          exit 1
+
+      - name: Upload duplicate report
+        if: steps.check.outputs.has_duplicates == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: duplicate-checks-report
+          path: duplicate_report.md
+          if-no-files-found: ignore
 
